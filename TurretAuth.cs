@@ -4,18 +4,11 @@ using UnityEngine;
 
 namespace Oxide.Plugins
 {
-    [Info("Turret Authorization", "haggbart", "1.0.0")]
+    [Info("Turret Authorization", "haggbart", "1.0.1")]
     [Description("Makes turrets act in a similar fashion to shotgun traps and flame turrets.")]
     class TurretAuth : RustPlugin
     {
-        private void OnEntityBuilt(Planner plan, GameObject go)
-        {
-            var turret = go.ToBaseEntity() as AutoTurret;
-            if (turret == null) return;
-            var authorizedPlayers = turret.GetBuildingPrivilege().authorizedPlayers;
-            AuthCupboard(turret, authorizedPlayers);
-        }
-
+        
         private object OnTurretTarget(AutoTurret turret, BaseCombatEntity entity)
         {
             var player = entity as BasePlayer;
@@ -32,14 +25,6 @@ namespace Oxide.Plugins
             }
             return false;
         }
-        
-        private static void AuthCupboard(AutoTurret turret, IEnumerable<PlayerNameID> playerNameIds)
-        {
-            foreach (PlayerNameID playerNameId in playerNameIds)
-            {
-                AuthPlayer(turret, playerNameId);
-            }
-        }
 
         private static void AuthPlayer(AutoTurret turret, PlayerNameID playerNameId)
         {
@@ -55,19 +40,6 @@ namespace Oxide.Plugins
                 username = player.displayName
             };
             return playerNameId;
-        }
-
-        [ChatCommand("unauth")] // testing
-        void CmdUnAuth(BasePlayer player, string command, string[] args)
-        {
-            if (!player.IsAdmin) return;
-            RaycastHit hit;
-            if (!Physics.Raycast(player.eyes.HeadRay(), out hit, 30)) return;
-            SendReply(player, hit.GetEntity().ToString());
-            var turret = (AutoTurret)hit.GetEntity();
-
-            turret.authorizedPlayers.Clear();
-            turret.SendNetworkUpdate();
         }
     }
 }
