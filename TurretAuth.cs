@@ -1,10 +1,8 @@
-﻿using System.Collections.Generic;
-using ProtoBuf;
-using UnityEngine;
+﻿using ProtoBuf;
 
 namespace Oxide.Plugins
 {
-    [Info("Turret Authorization", "haggbart", "1.0.1")]
+    [Info("Turret Authorization", "haggbart", "1.0.2")]
     [Description("Makes turrets act in a similar fashion to shotgun traps and flame turrets.")]
     class TurretAuth : RustPlugin
     {
@@ -19,7 +17,9 @@ namespace Oxide.Plugins
         
         private static bool IsAuthed(BasePlayer player, BaseEntity entity)
         {
-            foreach (PlayerNameID playerNameId in entity.GetBuildingPrivilege().authorizedPlayers)
+            BuildingPrivlidge buildingPrivilege = entity.GetBuildingPrivilege();
+            if (buildingPrivilege == null) return false;
+            foreach (PlayerNameID playerNameId in buildingPrivilege.authorizedPlayers)
             {
                 if (playerNameId.userid == player.userID) return true;
             }
