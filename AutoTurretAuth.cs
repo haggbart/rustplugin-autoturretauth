@@ -2,9 +2,9 @@
 
 namespace Oxide.Plugins
 {
-    [Info("Turret Authorization", "haggbart", "1.0.2")]
-    [Description("Makes turrets act in a similar fashion to shotgun traps and flame turrets.")]
-    class TurretAuth : RustPlugin
+    [Info("Auto Turret Authorization", "haggbart", "1.0.2")]
+    [Description("Makes auto turrets act in a similar fashion to shotgun traps and flame turrets.")]
+    class AutoTurretAuth : RustPlugin
     {
         
         private object OnTurretTarget(AutoTurret turret, BaseCombatEntity entity)
