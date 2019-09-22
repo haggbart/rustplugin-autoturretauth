@@ -70,9 +70,7 @@ namespace Oxide.Plugins
         {
             foreach (AutoTurret turret in turrets)
             {
-                RemovePlayer(turret, playerNameId.userid);
-                turret.authorizedPlayers.Add(playerNameId);
-                turret.SendNetworkUpdate();
+                AddPlayer(turret, playerNameId);
                 yield return new WaitForFixedUpdate();
             }
         }
