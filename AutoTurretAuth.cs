@@ -1,11 +1,12 @@
-﻿using System.Collections.Generic;
+﻿using System.Collections;
+using System.Collections.Generic;
 using System.Linq;
 using ProtoBuf;
 using UnityEngine;
 
 namespace Oxide.Plugins
 {
-    [Info("Auto Turret Authorization", "haggbart", "1.1.0")]
+    [Info("Auto Turret Authorization", "haggbart", "1.1.1")]
     [Description("One-way synchronizing cupboard authorization with auto-turrets.")]
     class AutoTurretAuth : RustPlugin
     {
@@ -29,35 +30,21 @@ namespace Oxide.Plugins
         private object OnCupboardAuthorize(BuildingPrivlidge privilege, BasePlayer player)
         {
             var turrets = GetAutoTurrets(privilege.buildingID);
-
-            foreach (AutoTurret turret in turrets)
-            {
-                AddPlayer(turret, GetPlayerNameId(player));
-            }
+            ServerMgr.Instance.StartCoroutine(AddPlayer(turrets, GetPlayerNameId(player)));
             return null;
         }
         
         private object OnCupboardDeauthorize(BuildingPrivlidge privilege, BasePlayer player)
         {
             var turrets = GetAutoTurrets(privilege.buildingID);
-
-            foreach (AutoTurret turret in turrets)
-            {
-                RemovePlayer(turret, player.userID);
-            }
+            ServerMgr.Instance.StartCoroutine(RemovePlayer(turrets, player.userID));
             return null;
         }
         
         private object OnCupboardClearList(BuildingPrivlidge privilege, BasePlayer player)
         {
             var turrets = GetAutoTurrets(privilege.buildingID);
-
-            foreach (AutoTurret turret in turrets)
-            {
-                turret.authorizedPlayers.Clear();
-                turret.SendNetworkUpdate();
-            }
-            
+            ServerMgr.Instance.StartCoroutine(RemovePlayer(turrets, player.userID));
             return null;
         }
         
@@ -81,28 +68,46 @@ namespace Oxide.Plugins
                 .Where(x => x.GetBuildingPrivilege()?.buildingID == buildingId);
             return turrets;
         }
+        
+        private IEnumerator AddPlayer(IEnumerable<AutoTurret> turrets, PlayerNameID playerNameId)
+        {
+            
+            foreach (AutoTurret turret in turrets)
+            {
+                RemovePlayer(turret, playerNameId.userid);
+                turret.authorizedPlayers.Add(playerNameId);
+                turret.SendNetworkUpdate();
+                SendReply(BasePlayer.FindByID(playerNameId.userid), "added to turret");
+                yield return new WaitForFixedUpdate();
+            }
+        }
 
         private static void AddPlayer(AutoTurret turret, PlayerNameID playerNameId)
         {
-            //turret.authorizedPlayers.RemoveAll(x => x.userid == playerNameId.userid); // this it what facepunch does to ensure players recorded twice
-            for (var i = 0; i < turret.authorizedPlayers.Count; i++)
-            {
-                if (turret.authorizedPlayers[i].userid != playerNameId.userid) continue;
-                turret.authorizedPlayers.RemoveAt(i);
-                break;
-            }
+            RemovePlayer(turret, playerNameId.userid);
             turret.authorizedPlayers.Add(playerNameId);
             turret.SendNetworkUpdate();
         }
-
+        
+        private IEnumerator RemovePlayer(IEnumerable<AutoTurret> turrets, ulong userId)
+        {
+            foreach (AutoTurret turret in turrets)
+            {
+                RemovePlayer(turret, userId);
+                turret.SendNetworkUpdate();
+                SendReply(BasePlayer.FindByID(userId), "removed from turret");
+                yield return new WaitForFixedUpdate();
+            }
+        }
+        
         private static void RemovePlayer(AutoTurret turret, ulong userId)
         {
+            //turret.authorizedPlayers.RemoveAll(x => x.userid == playerNameId.userid); // this it what facepunch does to ensure players recorded twice
             for (int i = turret.authorizedPlayers.Count - 1; i >= 0; i--)
             {
                 if (turret.authorizedPlayers[i].userid != userId) continue;
                 turret.authorizedPlayers.RemoveAt(i);
-                turret.SendNetworkUpdate();
-                return;
+                break;
             }
         }
 
