@@ -77,7 +77,6 @@ namespace Oxide.Plugins
                 RemovePlayer(turret, playerNameId.userid);
                 turret.authorizedPlayers.Add(playerNameId);
                 turret.SendNetworkUpdate();
-                SendReply(BasePlayer.FindByID(playerNameId.userid), "added to turret");
                 yield return new WaitForFixedUpdate();
             }
         }
@@ -95,7 +94,6 @@ namespace Oxide.Plugins
             {
                 RemovePlayer(turret, userId);
                 turret.SendNetworkUpdate();
-                SendReply(BasePlayer.FindByID(userId), "removed from turret");
                 yield return new WaitForFixedUpdate();
             }
         }
