@@ -6,7 +6,7 @@ using UnityEngine;
 
 namespace Oxide.Plugins
 {
-    [Info("Auto Turret Authorization", "haggbart", "1.1.1")]
+    [Info("Auto Turret Authorization", "haggbart", "1.1.2")]
     [Description("One-way synchronizing cupboard authorization with auto-turrets.")]
     class AutoTurretAuth : RustPlugin
     {
@@ -27,25 +27,22 @@ namespace Oxide.Plugins
 
         #region hooks
         
-        private object OnCupboardAuthorize(BuildingPrivlidge privilege, BasePlayer player)
+        private void OnCupboardAuthorize(BuildingPrivlidge privilege, BasePlayer player)
         {
             var turrets = GetAutoTurrets(privilege.buildingID);
             ServerMgr.Instance.StartCoroutine(AddPlayer(turrets, GetPlayerNameId(player)));
-            return null;
         }
         
-        private object OnCupboardDeauthorize(BuildingPrivlidge privilege, BasePlayer player)
+        private void OnCupboardDeauthorize(BuildingPrivlidge privilege, BasePlayer player)
         {
             var turrets = GetAutoTurrets(privilege.buildingID);
             ServerMgr.Instance.StartCoroutine(RemovePlayer(turrets, player.userID));
-            return null;
         }
         
-        private object OnCupboardClearList(BuildingPrivlidge privilege, BasePlayer player)
+        private void OnCupboardClearList(BuildingPrivlidge privilege, BasePlayer player)
         {
             var turrets = GetAutoTurrets(privilege.buildingID);
             ServerMgr.Instance.StartCoroutine(RemovePlayer(turrets, player.userID));
-            return null;
         }
         
         private void OnEntityBuilt(Planner plan, GameObject go)
@@ -69,7 +66,7 @@ namespace Oxide.Plugins
             return turrets;
         }
         
-        private IEnumerator AddPlayer(IEnumerable<AutoTurret> turrets, PlayerNameID playerNameId)
+        private static IEnumerator AddPlayer(IEnumerable<AutoTurret> turrets, PlayerNameID playerNameId)
         {
             
             foreach (AutoTurret turret in turrets)
@@ -88,7 +85,7 @@ namespace Oxide.Plugins
             turret.SendNetworkUpdate();
         }
         
-        private IEnumerator RemovePlayer(IEnumerable<AutoTurret> turrets, ulong userId)
+        private static IEnumerator RemovePlayer(IEnumerable<AutoTurret> turrets, ulong userId)
         {
             foreach (AutoTurret turret in turrets)
             {
