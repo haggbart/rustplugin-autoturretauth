@@ -2,8 +2,8 @@
 
 namespace Oxide.Plugins
 {
-    [Info("Auto Turret Authorization", "haggbart", "1.0.2")]
-    [Description("Makes auto turrets act in a similar fashion to shotgun traps and flame turrets.")]
+    [Info("Auto Turret Authorization", "haggbart", "1.0.3")]
+    [Description("Players authorized on the cupboard are added to the auto turret.")]
     class AutoTurretAuth : RustPlugin
     {
         
