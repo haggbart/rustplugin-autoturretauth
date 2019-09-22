@@ -6,11 +6,11 @@ using UnityEngine;
 
 namespace Oxide.Plugins
 {
-    [Info("Auto Turret Authorization", "haggbart", "1.1.2")]
+    [Info("Auto Turret Authorization", "haggbart", "1.1.4")]
     [Description("One-way synchronizing cupboard authorization with auto-turrets.")]
     class AutoTurretAuth : RustPlugin
     {
-
+        
         private const string PERSISTENT_AUTHORIZATION = "Use persistent authorization?";
         
         protected override void LoadDefaultConfig()
@@ -42,7 +42,7 @@ namespace Oxide.Plugins
         private void OnCupboardClearList(BuildingPrivlidge privilege, BasePlayer player)
         {
             var turrets = GetAutoTurrets(privilege.buildingID);
-            ServerMgr.Instance.StartCoroutine(RemovePlayer(turrets, player.userID));
+            ServerMgr.Instance.StartCoroutine(RemoveAll(turrets));
         }
         
         private void OnEntityBuilt(Planner plan, GameObject go)
@@ -68,7 +68,6 @@ namespace Oxide.Plugins
         
         private static IEnumerator AddPlayer(IEnumerable<AutoTurret> turrets, PlayerNameID playerNameId)
         {
-            
             foreach (AutoTurret turret in turrets)
             {
                 RemovePlayer(turret, playerNameId.userid);
@@ -95,6 +94,7 @@ namespace Oxide.Plugins
             }
         }
         
+        
         private static void RemovePlayer(AutoTurret turret, ulong userId)
         {
             //turret.authorizedPlayers.RemoveAll(x => x.userid == playerNameId.userid); // this it what facepunch does to ensure players recorded twice
@@ -103,6 +103,16 @@ namespace Oxide.Plugins
                 if (turret.authorizedPlayers[i].userid != userId) continue;
                 turret.authorizedPlayers.RemoveAt(i);
                 break;
+            }
+        }
+        
+        private static IEnumerator RemoveAll(IEnumerable<AutoTurret> turrets)
+        {
+            foreach (AutoTurret turret in turrets)
+            {
+                turret.authorizedPlayers.Clear();
+                turret.SendNetworkUpdate();
+                yield return new WaitForFixedUpdate();
             }
         }
 
