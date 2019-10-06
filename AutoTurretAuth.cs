@@ -6,7 +6,7 @@ using UnityEngine;
 
 namespace Oxide.Plugins
 {
-    [Info("Auto Turret Authorization", "haggbart", "1.1.4")]
+    [Info("Auto Turret Authorization", "haggbart", "1.1.5")]
     [Description("One-way synchronizing cupboard authorization with auto-turrets.")]
     class AutoTurretAuth : RustPlugin
     {
@@ -79,6 +79,7 @@ namespace Oxide.Plugins
         {
             RemovePlayer(turret, playerNameId.userid);
             turret.authorizedPlayers.Add(playerNameId);
+            turret.target = null;
             turret.SendNetworkUpdate();
         }
         
@@ -87,7 +88,6 @@ namespace Oxide.Plugins
             foreach (AutoTurret turret in turrets)
             {
                 RemovePlayer(turret, userId);
-                turret.SendNetworkUpdate();
                 yield return new WaitForFixedUpdate();
             }
         }
@@ -100,6 +100,7 @@ namespace Oxide.Plugins
             {
                 if (turret.authorizedPlayers[i].userid != userId) continue;
                 turret.authorizedPlayers.RemoveAt(i);
+                turret.SendNetworkUpdate();
                 break;
             }
         }
