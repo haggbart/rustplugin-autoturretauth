@@ -6,11 +6,12 @@ using UnityEngine;
 
 namespace Oxide.Plugins
 {
-    [Info("Auto Turret Authorization", "haggbart", "1.1.5")]
+    [Info("Auto Turret Authorization", "haggbart", "1.2.0")]
     [Description("One-way synchronizing cupboard authorization with auto-turrets.")]
     class AutoTurretAuth : RustPlugin
     {
-        
+        private static IEnumerable<AutoTurret> turrets;
+        private static List<PlayerNameID> authorizedPlayers;
         private const string PERSISTENT_AUTHORIZATION = "Use persistent authorization?";
         
         protected override void LoadDefaultConfig()
@@ -20,53 +21,92 @@ namespace Oxide.Plugins
 
         private void Init()
         {
-            if (!(bool)Config[PERSISTENT_AUTHORIZATION]) return;
-            Unsubscribe(nameof(OnCupboardDeauthorize));
-            Unsubscribe(nameof(OnCupboardClearList));
+            if ((bool)Config[PERSISTENT_AUTHORIZATION])
+            {
+                Unsubscribe(nameof(OnCupboardAuthorize));
+                Unsubscribe(nameof(OnCupboardDeauthorize));
+                Unsubscribe(nameof(OnCupboardClearList));
+            }
+            else
+            {
+                Unsubscribe(nameof(OnTurretTarget));
+            }
         }
 
-        #region hooks
+        #region autoturretauth
         
-        private void OnCupboardAuthorize(BuildingPrivlidge privilege, BasePlayer player)
+        private object OnTurretTarget(AutoTurret turret, BaseCombatEntity entity)
         {
-            var turrets = GetAutoTurrets(privilege.buildingID);
-            ServerMgr.Instance.StartCoroutine(AddPlayer(turrets, GetPlayerNameId(player)));
-        }
-        
-        private void OnCupboardDeauthorize(BuildingPrivlidge privilege, BasePlayer player)
-        {
-            var turrets = GetAutoTurrets(privilege.buildingID);
-            ServerMgr.Instance.StartCoroutine(RemovePlayer(turrets, player.userID));
-        }
-        
-        private void OnCupboardClearList(BuildingPrivlidge privilege, BasePlayer player)
-        {
-            var turrets = GetAutoTurrets(privilege.buildingID);
-            ServerMgr.Instance.StartCoroutine(RemoveAll(turrets));
+            if (entity == null) return null;
+            BasePlayer player = entity.ToPlayer();
+            if (!IsAuthed(player, turret)) return null;
+            Auth(turret, GetPlayerNameId(player));
+            return false;
         }
         
         private void OnEntityBuilt(Planner plan, GameObject go)
         {
             var turret = go.ToBaseEntity() as AutoTurret;
             if (turret == null) return;
-            var authorizedPlayers = turret.GetBuildingPrivilege()?.authorizedPlayers;
+            authorizedPlayers = turret.GetBuildingPrivilege()?.authorizedPlayers;
             if (authorizedPlayers == null) return;
             foreach (PlayerNameID playerNameId in authorizedPlayers)
             {
-                AddPlayer(turret, playerNameId);
+                Auth(turret, playerNameId);
             }
         }
         
-        #endregion hooks
-
-        private static IEnumerable<AutoTurret> GetAutoTurrets(uint buildingId)
+        private static bool IsAuthed(BasePlayer player, BaseEntity turret)
         {
-            var turrets = UnityEngine.Object.FindObjectsOfType<AutoTurret>()
-                .Where(x => x.GetBuildingPrivilege()?.buildingID == buildingId);
-            return turrets;
+            authorizedPlayers = turret.GetBuildingPrivilege()?.authorizedPlayers;
+            return authorizedPlayers != null && authorizedPlayers.Any(playerNameId => playerNameId.userid == player.userID);
         }
         
-        private static IEnumerator AddPlayer(IEnumerable<AutoTurret> turrets, PlayerNameID playerNameId)
+        private static void Auth(AutoTurret turret, PlayerNameID playerNameId)
+        {
+            turret.authorizedPlayers.Add(playerNameId);
+            turret.SendNetworkUpdate();
+        }
+
+        private static PlayerNameID GetPlayerNameId(BasePlayer player)
+        {
+            var playerNameId = new PlayerNameID()
+            {
+                userid = player.userID,
+                username = player.displayName
+            };
+            return playerNameId;
+        }
+        
+        #endregion autoturretauth
+        
+        #region umod-requirement
+        
+        private void OnCupboardAuthorize(BuildingPrivlidge privilege, BasePlayer player)
+        {
+            FindTurrets(privilege.buildingID);
+            ServerMgr.Instance.StartCoroutine(AddPlayer(GetPlayerNameId(player)));
+        }
+        
+        private void OnCupboardDeauthorize(BuildingPrivlidge privilege, BasePlayer player)
+        {
+            FindTurrets(privilege.buildingID);
+            ServerMgr.Instance.StartCoroutine(RemovePlayer(player.userID));
+        }
+        
+        private void OnCupboardClearList(BuildingPrivlidge privilege, BasePlayer player)
+        {
+            FindTurrets(privilege.buildingID);
+            ServerMgr.Instance.StartCoroutine(RemoveAll());
+        }
+
+        private static void FindTurrets(uint buildingId)
+        {
+            turrets = UnityEngine.Object.FindObjectsOfType<AutoTurret>()
+                .Where(x => x.GetBuildingPrivilege()?.buildingID == buildingId);
+        }
+        
+        private static IEnumerator AddPlayer(PlayerNameID playerNameId)
         {
             foreach (AutoTurret turret in turrets)
             {
@@ -83,7 +123,7 @@ namespace Oxide.Plugins
             turret.SendNetworkUpdate();
         }
         
-        private static IEnumerator RemovePlayer(IEnumerable<AutoTurret> turrets, ulong userId)
+        private static IEnumerator RemovePlayer(ulong userId)
         {
             foreach (AutoTurret turret in turrets)
             {
@@ -91,11 +131,9 @@ namespace Oxide.Plugins
                 yield return new WaitForFixedUpdate();
             }
         }
-        
-        
+
         private static void RemovePlayer(AutoTurret turret, ulong userId)
         {
-            //turret.authorizedPlayers.RemoveAll(x => x.userid == playerNameId.userid); // this it what facepunch does to ensure players recorded twice
             for (int i = turret.authorizedPlayers.Count - 1; i >= 0; i--)
             {
                 if (turret.authorizedPlayers[i].userid != userId) continue;
@@ -105,7 +143,7 @@ namespace Oxide.Plugins
             }
         }
         
-        private static IEnumerator RemoveAll(IEnumerable<AutoTurret> turrets)
+        private static IEnumerator RemoveAll()
         {
             foreach (AutoTurret turret in turrets)
             {
@@ -115,14 +153,6 @@ namespace Oxide.Plugins
             }
         }
 
-        private static PlayerNameID GetPlayerNameId(BasePlayer player)
-        {
-            var playerNameId = new PlayerNameID()
-            {
-                userid = player.userID,
-                username = player.displayName
-            };
-            return playerNameId;
-        }
+        #endregion umod-requirement
     }
 }
