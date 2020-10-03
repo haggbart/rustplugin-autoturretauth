@@ -1,4 +1,4 @@
-﻿using System.Collections;
+using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using ProtoBuf;
@@ -6,7 +6,7 @@ using UnityEngine;
 
 namespace Oxide.Plugins
 {
-    [Info("Auto Turret Authorization", "haggbart", "1.2.0")]
+    [Info("Auto Turret Authorization", "haggbart", "1.2.1")]
     [Description("One-way synchronizing cupboard authorization with auto-turrets.")]
     class AutoTurretAuth : RustPlugin
     {
@@ -59,7 +59,7 @@ namespace Oxide.Plugins
         private static bool IsAuthed(BasePlayer player, BaseEntity turret)
         {
             authorizedPlayers = turret.GetBuildingPrivilege()?.authorizedPlayers;
-            return authorizedPlayers != null && authorizedPlayers.Any(playerNameId => playerNameId.userid == player.userID);
+            return authorizedPlayers != null && authorizedPlayers.Any(playerNameId => playerNameId != null && playerNameId.userid == player.userID);
         }
         
         private static void Auth(AutoTurret turret, PlayerNameID playerNameId)
