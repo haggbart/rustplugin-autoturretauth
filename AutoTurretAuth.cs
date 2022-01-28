@@ -6,10 +6,12 @@ using UnityEngine;
 
 namespace Oxide.Plugins
 {
-    [Info("Auto Turret Authorization", "haggbart", "1.2.1")]
-    [Description("One-way synchronizing cupboard authorization with auto-turrets.")]
+    [Info("Auto Turret Authorization", "haggbart", "1.2.2")]
+    [Description("One-way synchronizing cupboard authorization with auto turrets")]
     class AutoTurretAuth : RustPlugin
     {
+        #region Initialization
+
         private static IEnumerable<AutoTurret> turrets;
         private static List<PlayerNameID> authorizedPlayers;
         private const string PERSISTENT_AUTHORIZATION = "Use persistent authorization?";
@@ -33,12 +35,14 @@ namespace Oxide.Plugins
             }
         }
 
-        #region autoturretauth
+        #endregion Initialization
+
+        #region Hooks
         
         private object OnTurretTarget(AutoTurret turret, BaseCombatEntity entity)
         {
-            if (entity == null) return null;
-            BasePlayer player = entity.ToPlayer();
+            var player = entity as BasePlayer;
+            if (player == null) return null;
             if (!IsAuthed(player, turret)) return null;
             Auth(turret, GetPlayerNameId(player));
             return false;
@@ -55,7 +59,29 @@ namespace Oxide.Plugins
                 Auth(turret, playerNameId);
             }
         }
+
+        private void OnCupboardAuthorize(BuildingPrivlidge privilege, BasePlayer player)
+        {
+            FindTurrets(privilege.buildingID);
+            ServerMgr.Instance.StartCoroutine(AddPlayer(GetPlayerNameId(player)));
+        }
         
+        private void OnCupboardDeauthorize(BuildingPrivlidge privilege, BasePlayer player)
+        {
+            FindTurrets(privilege.buildingID);
+            ServerMgr.Instance.StartCoroutine(RemovePlayer(player.userID));
+        }
+        
+        private void OnCupboardClearList(BuildingPrivlidge privilege, BasePlayer player)
+        {
+            FindTurrets(privilege.buildingID);
+            ServerMgr.Instance.StartCoroutine(RemoveAll());
+        }
+
+        #endregion Hooks
+
+        #region Helpers
+
         private static bool IsAuthed(BasePlayer player, BaseEntity turret)
         {
             authorizedPlayers = turret.GetBuildingPrivilege()?.authorizedPlayers;
@@ -76,28 +102,6 @@ namespace Oxide.Plugins
                 username = player.displayName
             };
             return playerNameId;
-        }
-        
-        #endregion autoturretauth
-        
-        #region umod-requirement
-        
-        private void OnCupboardAuthorize(BuildingPrivlidge privilege, BasePlayer player)
-        {
-            FindTurrets(privilege.buildingID);
-            ServerMgr.Instance.StartCoroutine(AddPlayer(GetPlayerNameId(player)));
-        }
-        
-        private void OnCupboardDeauthorize(BuildingPrivlidge privilege, BasePlayer player)
-        {
-            FindTurrets(privilege.buildingID);
-            ServerMgr.Instance.StartCoroutine(RemovePlayer(player.userID));
-        }
-        
-        private void OnCupboardClearList(BuildingPrivlidge privilege, BasePlayer player)
-        {
-            FindTurrets(privilege.buildingID);
-            ServerMgr.Instance.StartCoroutine(RemoveAll());
         }
 
         private static void FindTurrets(uint buildingId)
@@ -153,6 +157,6 @@ namespace Oxide.Plugins
             }
         }
 
-        #endregion umod-requirement
+        #endregion Helpers
     }
 }
